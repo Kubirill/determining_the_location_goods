@@ -1,1 +1,14 @@
-# determining_the_location_goods
+# Запуск имитационной модели
+
+Для корректной работы скрипта необходимо установить следующие библиотеки Python. Установите их с помощью команды:
+
+```bash
+pip install pandas numpy
+```
+
+Запуск скрипта
+
+```bash
+python warehouse_test.py
+```
+
