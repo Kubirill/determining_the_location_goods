@@ -30,18 +30,10 @@ class GaussianDistribution:
             self.std_dev = error * math.sqrt(count)
 
     def calculate_probability(self, x):
-        #print(f"m: {self.mean}, sigma: { self.std_dev }")
-        
         if self.std_dev == 0:
             self.std_dev = 0.1
-        
-       
         m = self.mean
         sigma = self.std_dev
-    #
-    #    if x <= m - sigma or x >= m + sigma:
-    #       return 0  #
-
         num = 1.47 / (self.std_dev * math.sqrt(2 * math.pi))
         exponent = -((x - self.mean) ** 2) / (2 * (self.std_dev ** 2))
         return num * math.exp(exponent)
@@ -68,9 +60,7 @@ class Shelf:
         if self.goods_count > 0:
             random_good = random.choice(self.goods_array)
             self.goods_array.remove(random_good)
-            #self.goods_count -= 1
             self.calculate_total_weight()
-
             destination_shelf = random.choice([shelf for shelf in other_shelves if shelf.number != self.number])
             destination_shelf.goods_array.append(random_good)
             destination_shelf.calculate_total_weight()
@@ -81,27 +71,28 @@ class Shelf:
         new_distribution.init_with_good(self.type_of_good.weight, 
                                         self.type_of_good.error_weight, 
                                         self.goods_count, good)
-        #print(f"witht: {self.distribution.calculate_probability(self.total_weight)}, without: { new_distribution.calculate_probability(self.total_weight) }")
         
         sum_prob = self.distribution.calculate_probability(self.total_weight) +  new_distribution.calculate_probability(self.total_weight)
         
         return new_distribution.calculate_probability(self.total_weight) / sum_prob if sum_prob > 0 else 0
 
 
-def test(num_tests=10000, seed_value=42, detailed_tests=None):
+def test(num_tests=10000, seed_value=42, detailed_tests=None, 
+         num_shelves_range=None, num_types_of_goods_range=None, num_goods_per_shelf=None,
+         weight_lower_range=None, weight_upper_range=None, error_range=None):
     random.seed(seed_value)  
     detailed_tests = detailed_tests or []  
     results = []
     
     for test_num in range(num_tests):
-        
-        num_shelves = random.randint(10, 100)
-        num_types_of_goods = random.randint(5, 50)
-        num_goods_per_shelf = (random.randint(10, 20), random.randint(30, 100))
-        weight_range = (random.uniform(0.1, 5), random.uniform(20, 100))
-        error_range = (0.01, 0.03)
+        # Если параметры не переданы, устанавливаем их случайные значения
+        num_shelves = random.randint(num_shelves_range[0],num_shelves_range[1]) if num_shelves_range is not None else random.randint(10, 100)
+        num_types_of_goods = random.randint(num_types_of_goods_range[0],num_types_of_goods_range[1])  if num_types_of_goods_range is not None else random.randint(5, 50)
+        weight_range = (random.uniform(weight_lower_range[0],weight_lower_range[1]), random.uniform(weight_upper_range[0],weight_upper_range[1])) if (weight_lower_range is not None and weight_upper_range is not None ) else (random.uniform(0.1, 5), random.uniform(20, 100))
+        error_range = error_range if error_range is not None else (0.01, 0.03)
+        num_goods_per_shelf = num_goods_per_shelf if num_goods_per_shelf is not None else (random.randint(10, 20), random.randint(30, 100))
 
-        
+        # Генерация типов товаров
         type_of_goods_list = [
             TypeOfGoods(f"Type_{i+1}", 
                         random.uniform(weight_range[0], weight_range[1]), 
@@ -109,7 +100,7 @@ def test(num_tests=10000, seed_value=42, detailed_tests=None):
             for i in range(num_types_of_goods)
         ]
         
-        
+        # Создание полок и заполнение их товарами
         shelves = []
         for i in range(1, num_shelves + 1):
             shelf_type = random.choice(type_of_goods_list)
@@ -122,16 +113,14 @@ def test(num_tests=10000, seed_value=42, detailed_tests=None):
             shelf.calculate_distribution()
             shelves.append(shelf)
         
-        
+        # Перемещение товара
         move_result = shelves[0].move_random_good(shelves)
-        
-        
         if move_result is None:
             continue
         
         missing_good, source_shelf, destination_shelf = move_result
-
         
+        # Расчёт вероятностей
         probabilities = [(shelf, shelf.check_good_probability(missing_good)) for shelf in shelves]
         probabilities.sort(key=lambda x: x[1], reverse=True)
 
@@ -152,7 +141,7 @@ def test(num_tests=10000, seed_value=42, detailed_tests=None):
             ]).sort_values(by="Probability", ascending=False)
             print(detail_table.to_string(index=False))
         
-        
+        # Сбор данных о результатах
         for rank, (shelf, prob) in enumerate(probabilities, start=1):
             if missing_good in shelf.goods_array:
                 target_shelf_rank = rank
@@ -165,7 +154,6 @@ def test(num_tests=10000, seed_value=42, detailed_tests=None):
                 target_shelf_all_std_dev = np.std([g.weight for g in shelf.goods_array])
                 break
 
-        
         results.append({
             "Test Number": test_num + 1,
             "Target Shelf Probability": target_shelf_prob,
@@ -180,13 +168,9 @@ def test(num_tests=10000, seed_value=42, detailed_tests=None):
             "Target Shelf All Std Dev": target_shelf_all_std_dev
         })
 
-    
     results_df = pd.DataFrame(results)
     return results_df
 
 
-detailed_tests = [1]  
-#random.seed(42)
-results_df = test(detailed_tests=detailed_tests)
-results_df.to_csv('random_generated_42.csv', index=False)
-print("Results saved as 'random_generated_42.csv'.")
+
+
